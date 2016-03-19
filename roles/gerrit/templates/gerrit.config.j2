@@ -1,0 +1,29 @@
+[gerrit]
+	basePath = git
+	canonicalWebUrl = http://localhost:8080/
+[database]
+	type = {{ gerrit_db_type }}
+	database = {{ gerrit_db_name }}
+	hostname = {{ gerrit_db_host }}
+	username = {{ gerrit_db_user }}
+[index]
+	type = LUCENE
+[auth]
+	type = OPENID
+[receive]
+	enableSignedPush = false
+[sendemail]
+	smtpServer = localhost
+[container]
+	user = gerrit
+	javaHome = /usr/lib/jvm/default-java/jre
+[sshd]
+	listenAddress = *:29418
+[httpd]
+	listenUrl = http://*:8080/
+[cache]
+	directory = cache
+[http]
+	proxy = http://proxy:8080
+	proxyUsername = {{ gerrit_account_name }}
+	proxyPassword = {{ gerrit_global_pass }}

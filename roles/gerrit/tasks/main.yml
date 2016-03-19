@@ -1,7 +1,190 @@
 ---
-- name: include basic packages installations
-  include: packages_installation.yml
+- name: system preparation | export aws public dns
+  shell: curl -s http://169.254.169.254/latest/meta-data/public-hostname
+  register: aws_public_dns
 
-- name: include gerrit configurations 
-  include: gerrit_configuration.yml
+- name: system preparation | installing pre-reqs
+  apt: name="{{ item.name }}" state="{{ item.state }}" update_cache=yes
+  with_items:
+    - { name: python-mysqldb,             state: present }
+    - { name: software-properties-common, state: present }
+    - { name: mariadb-server,             state: present }
+    - { name: default-jre-headless,       state: present }
+    - { name: git,                        state: present }
+    - { name: python-mysqldb,             state: present }
+    - { name: nginx,                      state: present }
+    - { name: apache2,                    state: absent  }
+    
+- name: mysql | adding mariadb repo keys
+  apt_key:
+    keyserver: "{{ mariadb_debian_repo_keyserver }}"
+    id: "{{ mariadb_debian_repo_key }}"
+    state: present
 
+- name: mysql | adding mariadb repo
+  apt_repository:
+    repo: "{{ mariadb_debian_repo }}"
+    state: present
+
+- name: mysql | Set MariaDB root password
+  command: "debconf-set-selections <<< 'mysql-server-10.0 mysql-server/root_password password {{ gerrit_global_pass }}'"
+  command: "debconf-set-selections <<< 'mysql-server-10.0 mysql-server/root_password_again password {{ gerrit_global_pass }}'"
+  changed_when: false # Never report as changed
+
+- name: mysql | installing mariadb mysql
+  apt:
+    name: mariadb-server
+    state: present
+
+- name: mysql |configuring mariadb mysql
+  template:
+    src: my.cnf.j2
+    dest: /etc/mysql/my.cnf
+  notify: restart mysql
+
+- name: mysql | configuring client configuration
+  template:
+    src: client.cnf.j2
+    dest: /etc/mysql/conf.d/client.cnf
+    owner: root
+    group: root
+    mode: 0644
+  notify: reload mysql
+
+- name: gerrit | creating gerrit install directory
+  file:
+    path: "{{ gerrit_install_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+
+- name: gerrit | downloading gerrit
+  get_url:
+    url: "{{ gerrit_dl_url }}/{{ gerrit_war_name }}"
+    dest: "{{ gerrit_war_dir }}"
+    sha256sum: "{{ gerrit_dl_sha256sum }}"
+    validate_certs: false
+
+- name: gerrit | creating gerrit group
+  group:
+    name: "{{ gerrit_account_name }}"
+    system: yes
+    state: present
+
+- name: gerrit | creating gerrit user
+  user:
+    name: "{{ gerrit_account_name }}"
+    comment: "{{ gerrit_account_comment }}"
+    home: "{{ gerrit_account_home }}"
+    group: "{{ gerrit_account_group }}"
+    password: "{{ gerrit_global_pass }}"
+    generate_ssh_key: yes
+    system: yes
+    state: present
+
+- name: gerrit | creating MySQL DB (if used)
+  mysql_db:
+    name: "{{ gerrit_db_name }}"
+    state: present
+
+- name: gerrit | creating MySQL DB User(s) (if used)
+  mysql_user:
+    name: "{{ gerrit_db_user }}"
+    password: "{{ gerrit_global_pass }}"
+    priv: "{{ gerrit_db_name }}.*:ALL"
+    state: present
+
+- name: gerrit | creating gerrit install directory
+  file:
+    path: "{{ gerrit_install_dir }}"
+    owner: "{{ gerrit_account_name }}"
+    group: "{{ gerrit_account_group }}"
+    mode: 0755
+    state: directory
+
+- name: gerrit | creating gerrit etc directory
+  file:
+    path: "{{ gerrit_install_dir }}/etc"
+    owner: "{{ gerrit_account_name }}"
+    group: "{{ gerrit_account_group }}"
+    mode: 0755
+    state: directory
+
+- name: gerrit | configuring gerrit
+  template:
+    src: gerrit.config.j2
+    dest: "{{ gerrit_install_dir }}/etc/gerrit.config"
+    owner: "{{ gerrit_account_name }}"
+    group: "{{ gerrit_account_group }}"
+    mode: 0644
+  notify: restart gerrit
+
+- name: gerrit | configuring gerrit secure settings
+  template:
+    src: secure.config.j2
+    dest: "{{ gerrit_install_dir }}/etc/secure.config"
+    owner: "{{ gerrit_account_name }}"
+    group: "{{ gerrit_account_group }}"
+    mode: 0600
+  notify: restart gerrit
+
+- name: gerrit | initializing gerrit
+  sudo_user: "{{ gerrit_account_name }}"
+  command: "{{ gerrit_init }}"
+  args:
+    creates: "{{ gerrit_install_dir }}/bin/gerrit.sh"
+  register: gerrit_initialization
+
+- name: gerrit | installing mysql connector
+  get_url:
+    url: "{{ gerrit_mysql_connector_url }}/{{ gerrit_mysql_connector_file }}"
+    dest: "{{ gerrit_install_dir }}/lib/{{ gerrit_mysql_connector_file }}"
+  sudo_user: "{{ gerrit_account_name }}"
+
+- name: gerrit | reindexing gerrit
+  sudo_user: "{{ gerrit_account_name }}"
+  command: "java -jar {{ gerrit_war_path }} reindex -d {{ gerrit_install_dir }}"
+  when: gerrit_initialization.changed
+
+- name: gerrit | configuring gerrit default service settings
+  template:
+    src: gerritcodereview.j2
+    dest: /etc/default/gerritcodereview
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart gerrit
+
+- name: gerrit | configuring gerrit init file link
+  file:
+    src: "{{ gerrit_install_dir }}/bin/gerrit.sh"
+    dest: /etc/init.d/gerrit
+    state: link
+
+- name: gerrit | ensuring gerrit service is started and starts on boot
+  service:
+    name: gerrit
+    state: started
+    enabled: yes
+
+- name: nginx | configure gerrit nginx web
+  template: 
+    src: gerrit-nginx
+    dest: /etc/nginx/sites-available/gerrit
+    
+- name: nginx | set gerrit nginx web to enabled
+  file:
+    src: /etc/nginx/sites-available/gerrit
+    dest: /etc/nginx/sites-enabled/gerrit
+    state: link
+
+- name: services | ensuring gerrit service is started and starts on boot
+  service: name={{ item }} state=restarted enabled=yes
+  with_items:
+    - "mysql"
+    - "nginx"
+    - "gerrit"
+    
+- debug:
+    msg: "Pleas try access gerrit through: http://{{ aws_public_dns.stdout }}/"

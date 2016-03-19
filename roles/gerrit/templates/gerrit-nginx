@@ -2,7 +2,7 @@ server {
  listen 80;
  server_name {{ aws_public_dns.stdout }};
  
- error_log {{ gerrit_install_dir }}/logs/nginx-error.log;
+ error_log {{ gerrit_install_dir }}/logs/error-gerrit-nginx.log;
  root {{ gerrit_install_dir }};
  
  location @gerrit {

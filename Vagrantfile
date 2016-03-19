@@ -11,10 +11,11 @@
 
 # AMI Data
 HOSTS = {
-  'webserver' => {
+  'gerrit' => {
     :amazon_image  => 'ami-9a562df2',
     :shh_username  => 'ubuntu',
-    :instance_type => 't2.micro'
+    :instance_type => 't2.micro',
+    :disk_size_gb  => 10
     }
   }
 
@@ -34,7 +35,7 @@ HOSTS.each do | name, info |
         aws.security_groups      = ENV['AWS_SECURITY_GROUP_NAME']
         aws.ami                  = info[:amazon_image]
         aws.instance_type        = info[:instance_type]
-        aws.block_device_mapping = [{ 'DeviceName' => '/dev/sda1', 'Ebs.VolumeSize' => 8 }]
+        aws.block_device_mapping = [{ 'DeviceName' => '/dev/sda1', 'Ebs.VolumeSize' => info[:disk_size_gb] }]
         aws.tags = {
           'Name'        => name,
           'Environment' => 'vagrant-sandbox'

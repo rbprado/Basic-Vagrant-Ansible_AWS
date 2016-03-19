@@ -1,4 +1,3 @@
-
 # {{ ansible_managed }}
 
 # Path of the Gerrit site to run.  $GERRIT_SITE/etc/gerrit.config
@@ -7,7 +6,7 @@ GERRIT_SITE={{ gerrit_install_dir }}
 
 # Location of the gerrit.war download that we will execute.  Defaults to
 # container.war property in $GERRIT_SITE/etc/gerrit.config.
-GERRIT_WAR={{ gerrit_warfile_dir }}/{{ gerrit_name_ver }}.war
+GERRIT_WAR={{ gerrit_war_path }}
 
 # If set to "1" disables Gerrit from starting.
 NO_START=0
