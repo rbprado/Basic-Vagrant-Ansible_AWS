@@ -79,7 +79,9 @@ HOSTS = {
 }
 ```
 NOTE 1: You need to create an elastic IP for your VM, without it after each reboot you will get a new IP.
+
 NOTE 2: Do not forget to open the needed ports at your security group.
+
 NOTE 3: While using VPC, the security group must be set through ID and not by it's name.
 
 
