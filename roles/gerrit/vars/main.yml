@@ -1,0 +1,6 @@
+---
+freeipa_hostname: ec2-50-16-170-94.compute-1.amazonaws.com
+freeipa_pass: 12345678
+domain: compute-1.amazonaws.com
+realm: COMPUTE-1.AMAZONAWS.COM
+ldap_dc_full: dc=compute-1,dc=amazonaws,dc=com

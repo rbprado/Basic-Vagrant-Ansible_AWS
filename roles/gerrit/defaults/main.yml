@@ -1,11 +1,10 @@
 ---
+# Gerrit data for installation
 gerrit_account_name: gerrit
 gerrit_account_comment: Gerrit User
 gerrit_account_home: "{{ gerrit_install_dir }}"
 gerrit_account_group: gerrit
 gerrit_global_pass: $6$ORmN2r3j8$YIWsVOdiJzwYmbI0.d/n5ggM0K6R6voWeQaI97zeDqMPS2934D3FWp/YWHFxBsvcg0mdocMnL7Q/xsimxZjTA. #gerrit123 sha256 hashed
-
-gerrit_auth_type: OPENID  #defines authorization type...OPENID, LDAP, LDAP_BIND...
 
 gerrit_db_type: mysql
 gerrit_db_name: reviewdb
@@ -27,9 +26,7 @@ gerrit_smtp_server: localhost
 gerrit_sshd_listen_port: 29418
 gerrit_version: 2.12
 
-#MARIADB MYSQL
-
-# defaults file for ansible-mariadb-mysql
+# MariaDB MYSQL data for installation
 mariadb_debian_repo: 'deb http://ftp.osuosl.org/pub/mariadb/repo/{{ mariadb_version }}/{{ ansible_distribution|lower }} {{ ansible_distribution_release|lower }} main'
 mariadb_debian_repo_key: '0xcbcb082a1bb943db'
 mariadb_debian_repo_keyserver: 'keyserver.ubuntu.com'

@@ -170,7 +170,7 @@
 
 - name: nginx | configure gerrit nginx web
   template: 
-    src: gerrit-nginx
+    src: nginx.conf.j2
     dest: /etc/nginx/sites-available/gerrit
     
 - name: nginx | set gerrit nginx web to enabled
@@ -179,6 +179,17 @@
     dest: /etc/nginx/sites-enabled/gerrit
     state: link
 
+- name: nginx | creating ssl CA forlder
+  file:
+    path: /etc/nginx/ssl
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+    
+- name: nginx | creating the CA for ssl
+  command: openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/nginx/ssl/gerrit.key -out /etc/nginx/ssl/gerrit.crt -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN={{ aws_public_dns.stdout }}"
+    
 - name: services | ensuring gerrit service is started and starts on boot
   service: name={{ item }} state=restarted enabled=yes
   with_items:
@@ -187,4 +198,4 @@
     - "gerrit"
     
 - debug:
-    msg: "Pleas try access gerrit through: http://{{ aws_public_dns.stdout }}/"
+    msg: "Please try access gerrit through: http://{{ aws_public_dns.stdout }}/"

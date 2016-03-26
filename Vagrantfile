@@ -9,15 +9,19 @@
 # export AWS_EC2_KEY_NAME='vagrant'
 # export AWS_SECURITY_GROUP_NAME='vagrant'
 
-# AMI Data
+# NOTE: Fill the following keys according your aws configuration:
 HOSTS = {
   'gerrit' => {
-    :amazon_image  => 'ami-9a562df2',
-    :shh_username  => 'ubuntu',
-    :instance_type => 't2.micro',
-    :disk_size_gb  => 10
-    }
+    :amazon_image   => 'ami-fce3c696',
+    :shh_username   => 'ubuntu',
+    :instance_type  => 't2.micro',
+    :disk_size_gb   => 10,
+    :security_group => 'sg-4c72a434',
+    :elastic_ip     => '50.16.175.221',
+    :private_ip     => '172.31.0.20',
+    :subnet_id      => 'subnet-4168ec37'    
   }
+}
 
 HOSTS.each do | name, info |
   Vagrant.configure(2) do |config|
@@ -32,9 +36,12 @@ HOSTS.each do | name, info |
         aws.region               = ENV['AWS_DEFAULT_REGION']
         aws.availability_zone    = ENV['AWS_DEFAULT_REGION'] + 'a'
         aws.keypair_name         = ENV['AWS_EC2_KEY_NAME']
-        aws.security_groups      = ENV['AWS_SECURITY_GROUP_NAME']
         aws.ami                  = info[:amazon_image]
         aws.instance_type        = info[:instance_type]
+        aws.security_groups      = info[:security_group]
+        aws.elastic_ip           = info[:elastic_ip]
+        aws.private_ip_address   = info[:private_ip]
+        aws.subnet_id            = info[:subnet_id]
         aws.block_device_mapping = [{ 'DeviceName' => '/dev/sda1', 'Ebs.VolumeSize' => info[:disk_size_gb] }]
         aws.tags = {
           'Name'        => name,

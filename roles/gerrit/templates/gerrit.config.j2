@@ -1,6 +1,6 @@
 [gerrit]
 	basePath = git
-	canonicalWebUrl = http://localhost:8080/
+	canonicalWebUrl = http://{{ aws_public_dns.stdout }}/
 [database]
 	type = {{ gerrit_db_type }}
 	database = {{ gerrit_db_name }}
@@ -9,7 +9,16 @@
 [index]
 	type = LUCENE
 [auth]
-	type = OPENID
+	type = LDAP
+[ldap]
+	server = ldap://{{ freeipa_hostname }}
+	accountBase = cn=users,cn=accounts,{{ ldap_dc_full }}
+	accountPattern = (&(objectClass=person)(uid=${username}))
+	groupBase = cn=groups,cn=accounts,{{ ldap_dc_full }}
+	groupPattern = (&(objectClass=posixgroup)(cn=${groupname}))
+	groupMemberPattern = (&(objectClass=posixgroup)(member=uid=${username},cn=users,cn=accounts,{{ ldap_dc_full }}))
+	sslVerify = false
+	accountFullName = displayName
 [receive]
 	enableSignedPush = false
 [sendemail]
@@ -19,8 +28,8 @@
 	javaHome = /usr/lib/jvm/default-java/jre
 [sshd]
 	listenAddress = *:29418
-[httpd]
-	listenUrl = http://*:8080/
+[download]
+	scheme = ssh
 [cache]
 	directory = cache
 [http]
